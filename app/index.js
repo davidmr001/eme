@@ -89,8 +89,8 @@ ipcMain.on('close-focus-window', () => {
 })
 
 // TODO: refactor
-ipcMain.on('print-to-pdf', (e, html) => {
-  pdfWindow = new BrowserWindow({show: false})
+ipcMain.on('print-to-pdf', (e, html, saveTo) => {
+  let tempWin = new BrowserWindow({show: false})
   const tempPath = path.join(os.tmpdir(), `eme-export-pdf.${Date.now()}.html`)
   fs.writeFileSync(tempPath, html, 'utf8')
   console.log(tempPath)
@@ -136,8 +136,4 @@ ipcMain.on('add-recent-file', (e, filePath) => {
   Menu.setApplicationMenu(buildMenu({
     createWindow: emeWindow.createWindow
   }))
-})
-
-ipcMain.on('log', (e, msg) => {
-  console.log(JSON.stringify(msg, null, 2))
 })
