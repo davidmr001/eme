@@ -2,7 +2,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const net = require ('net')
+const net = require('net')
 const {
   app,
   BrowserWindow,
@@ -38,19 +38,19 @@ const createMainWindow = () => {
   return win
 }
 
-const listenForArgumentsFromNewProcess = (mainWindow) => {
+const listenForArgumentsFromNewProcess = mainWindow => {
   if (fs.existsSync(path.join(os.tmpdir(), 'eme.sock'))) {
     fs.unlinkSync(path.join(os.tmpdir(), 'eme.sock'))
   }
   const server = net.createServer(connection => {
     let data = ''
     connection.on('data', chunk => {
-      data = data + chunk
+      data += chunk
     })
     connection.on('end', () => {
       const options = JSON.parse(data)
       const {pathsToOpen, resourcePath} = options
-      const pathToOpen = pathsToOpen[1]
+      const pathToOpen = pathsToOpen[0]
       const locationToOpen = `${resourcePath}/${pathToOpen}`
       mainWindow.webContents.send('open-file', locationToOpen)
     })
@@ -59,7 +59,6 @@ const listenForArgumentsFromNewProcess = (mainWindow) => {
   server.listen({path: path.join(os.tmpdir(), 'eme.sock')})
   server.on('error', error => console.error `Application server failed', ${error}`)
 }
-
 
 let mainWindow // eslint-disable-line
 let pdfWindow // eslint-disable-line
@@ -70,7 +69,7 @@ const initialize = argv => {
     const {pathsToOpen, resourcePath} = argv
     if (pathsToOpen.length > 0) {
       if (pathsToOpen) {
-        const pathToOpen = pathsToOpen[1]
+        const pathToOpen = pathsToOpen[0]
         const locationToOpen = `${resourcePath}/${pathToOpen}`
         mainWindow.webContents.on('did-finish-load', () => {
           mainWindow.webContents.send('open-file', locationToOpen)
