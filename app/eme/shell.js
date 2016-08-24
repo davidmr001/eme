@@ -72,7 +72,7 @@ Usage: eme [options] [path ...]
   }
 
   const pathsToOpen = argv._
-  const resourcePath = argv.executedFrom
+  const resourcePath = process.cwd()
   return {
     resourcePath, pathsToOpen
   }

@@ -333,6 +333,18 @@ module.exports = cb => {
           type: 'separator'
         },
         {
+          type: 'separator'
+        },
+        {
+          label: 'Install Shell Command',
+          click() {
+            new InstallShell().installShell()
+          }
+        },
+        {
+          type: 'separator'
+        },
+        {
           role: 'hide'
         },
         {

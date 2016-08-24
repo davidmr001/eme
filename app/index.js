@@ -2,6 +2,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const net = require ('net')
 const {
   app,
   BrowserWindow,
@@ -33,21 +34,45 @@ const createMainWindow = () => {
   }
   const win = emeWindow.createWindow({windowState})
   windowState.manage(win)
+
   return win
+}
+
+const listenForArgumentsFromNewProcess = () => {
+  if (fs.existsSync(path.join(os.tmpdir(), 'eme.sock'))) {
+    fs.unlinkSync(path.join(os.tmpdir(), 'eme.sock'))
+  }
+  const server = net.createServer(connection => {
+    let data = ''
+    connection.on('data', chunk => {
+      data = data + chunk
+    })
+    connection.on('end', () => {
+      const options = JSON.parse(data)
+      const {pathsToOpen, resourcePath} = options
+      const pathToOpen = pathsToOpen[1]
+      const locationToOpen = `${resourcePath}/${pathToOpen}`
+      const mainWindow = createMainWindow()
+      mainWindow.webContents.on('did-finish-load', () => {
+        mainWindow.webContents.send('open-file', locationToOpen)
+      })
+    })
+  })
+
+  server.listen({path: path.join(os.tmpdir(), 'eme.sock')})
+  server.on('error', error => console.error `Application server failed', ${error}`)
 }
 
 let mainWindow // eslint-disable-line
 let pdfWindow // eslint-disable-line
-app.on('ready', () => {
-  const argv = parseShellCommand()
-  Menu.setApplicationMenu(appMenu)
+const initialize = argv => {
   mainWindow = createMainWindow()
-
+  listenForArgumentsFromNewProcess()
   if (!isDev) {
     const {pathsToOpen, resourcePath} = argv
     if (pathsToOpen.length > 0) {
       if (pathsToOpen) {
-        const pathToOpen = pathsToOpen[0]
+        const pathToOpen = pathsToOpen[1]
         const locationToOpen = `${resourcePath}/${pathToOpen}`
         mainWindow.webContents.on('did-finish-load', () => {
           mainWindow.webContents.send('open-file', locationToOpen)
@@ -58,9 +83,26 @@ app.on('ready', () => {
       }
     }
   }
-
   if (platform === 'darwin') {
     mainWindow.setSheetOffset(36)
+  }
+}
+
+app.on('ready', () => {
+  const argv = parseShellCommand()
+  Menu.setApplicationMenu(appMenu)
+  if (fs.existsSync(path.join(os.tmpdir(), 'eme.sock'))) {
+    const client = net.connect({path: path.join(os.tmpdir(), 'eme.sock')}, () => {
+      client.write(JSON.stringify(argv), () => {
+        client.end()
+        app.quit()
+      })
+    })
+    client.on('error', () => {
+      initialize(argv)
+    })
+  } else {
+    initialize(argv)
   }
 })
 
@@ -89,8 +131,8 @@ ipcMain.on('close-focus-window', () => {
 })
 
 // TODO: refactor
-ipcMain.on('print-to-pdf', (e, html, saveTo) => {
-  let tempWin = new BrowserWindow({show: false})
+ipcMain.on('print-to-pdf', (e, html) => {
+  pdfWindow = new BrowserWindow({show: false})
   const tempPath = path.join(os.tmpdir(), `eme-export-pdf.${Date.now()}.html`)
   fs.writeFileSync(tempPath, html, 'utf8')
   console.log(tempPath)
@@ -136,4 +178,8 @@ ipcMain.on('add-recent-file', (e, filePath) => {
   Menu.setApplicationMenu(buildMenu({
     createWindow: emeWindow.createWindow
   }))
+})
+
+ipcMain.on('log', (e, msg) => {
+  console.log(JSON.stringify(msg, null, 2))
 })
