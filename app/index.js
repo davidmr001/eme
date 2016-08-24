@@ -56,7 +56,7 @@ const listenForArgumentsFromNewProcess = () => {
       const pathToOpen = pathsToOpen[0]
       const locationToOpen = `${resourcePath}/${pathToOpen}`
       if (fs.existsSync(locationToOpen)) {
-        if (emeWindow.wins !== 0) {
+        if (emeWindow && emeWindow.wins !== 0) {
           if (mainWindow.isMinimized()) {
             mainWindow.restore()
             mainWindow.webContents.send('open-file', locationToOpen)
@@ -65,7 +65,7 @@ const listenForArgumentsFromNewProcess = () => {
             mainWindow.focus()
           }
         } else {
-          initialize(argv)
+          initialize(argv) // eslint-disable-line
         }
       }
     })
@@ -103,9 +103,9 @@ const initialize = argv => {
 app.on('ready', () => {
   const argv = parseShellCommand()
   Menu.setApplicationMenu(appMenu)
-  if (!fs.existsSync( path.join(os.tmpdir(), 'eme.sock'))) {
+  if (!fs.existsSync(path.join(os.tmpdir(), 'eme.sock'))) {
     initialize(argv)
-  } else {
+  } else if (fs.existsSync(path.join(os.tmpdir(), 'eme.sock'))) {
     const client = net.connect({path: path.join(os.tmpdir(), 'eme.sock')}, () => {
       client.write(JSON.stringify(argv), () => {
         client.end()
