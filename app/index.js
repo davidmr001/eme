@@ -38,7 +38,7 @@ const createMainWindow = () => {
   return win
 }
 
-const listenForArgumentsFromNewProcess = () => {
+const listenForArgumentsFromNewProcess = (mainWindow) => {
   if (fs.existsSync(path.join(os.tmpdir(), 'eme.sock'))) {
     fs.unlinkSync(path.join(os.tmpdir(), 'eme.sock'))
   }
@@ -52,10 +52,7 @@ const listenForArgumentsFromNewProcess = () => {
       const {pathsToOpen, resourcePath} = options
       const pathToOpen = pathsToOpen[1]
       const locationToOpen = `${resourcePath}/${pathToOpen}`
-      const mainWindow = createMainWindow()
-      mainWindow.webContents.on('did-finish-load', () => {
-        mainWindow.webContents.send('open-file', locationToOpen)
-      })
+      mainWindow.webContents.send('open-file', locationToOpen)
     })
   })
 
@@ -63,11 +60,12 @@ const listenForArgumentsFromNewProcess = () => {
   server.on('error', error => console.error `Application server failed', ${error}`)
 }
 
+
 let mainWindow // eslint-disable-line
 let pdfWindow // eslint-disable-line
 const initialize = argv => {
   mainWindow = createMainWindow()
-  listenForArgumentsFromNewProcess()
+  listenForArgumentsFromNewProcess(mainWindow)
   if (!isDev) {
     const {pathsToOpen, resourcePath} = argv
     if (pathsToOpen.length > 0) {
